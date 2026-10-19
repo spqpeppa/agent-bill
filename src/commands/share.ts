@@ -6,11 +6,13 @@ import { parseArgs } from 'node:util';
 import { collect, localDate, toRows } from '../collect.ts';
 import { HANDLE, loadConfig, saveConfig } from '../config.ts';
 import { BRANCH, DataBranch } from '../datadir.ts';
+import { addMirasim, handleByMirasim, loadHandles, saveHandles, type Handles } from '../handles.ts';
+import { loadStarters, type Starters } from '../mirasim.ts';
 import { loadPrices, pricesDate } from '../pricing.ts';
 import type { Call, UsageFile } from '../types.ts';
 import { COLLECTOR } from '../version.ts';
 
-const HELP = `usage: agent-bill share [--repo URL] [--handle NAME] [--since YYYY-MM-DD] [--dry-run] [--out DIR]
+const HELP = `usage: agent-bill share [--repo URL] [--handle NAME] [--since YYYY-MM-DD] [--mirasim EMAIL] [--dry-run] [--out DIR]
 
 Writes your daily totals to the ${BRANCH} branch of a git repo your team shares, one file per
 day at usage/<handle>/<device>/<date>.json. Only totals: date, handle, agent, model, repo, branch,
@@ -20,7 +22,10 @@ call count, token counts and estimated cost. Never prompts, code, paths or sessi
   --handle NAME   the name you appear under: a-z, 0-9 and -, up to 32 (remembered)
   --since DATE    first local date to write; default: 6 days ago. Older files are left alone,
                   because agents delete old logs and an old day would come back incomplete.
-  --dry-run       print exactly what would be written; touch nothing
+  --mirasim EMAIL in a Mirasim space: your Mirasim account, so the sessions you start count as yours.
+                  Saved in handles.json on the data branch. Everyone's usage on a shared machine is
+                  split by who started each session; people not in handles.json are left out.
+  --dry-run       print exactly what would be written; never pushes
   --out DIR       write the files into DIR instead of a git repo`;
 
 export async function share(args: string[]): Promise<number> {
@@ -32,6 +37,7 @@ export async function share(args: string[]): Promise<number> {
       since: { type: 'string' },
       'dry-run': { type: 'boolean', default: false },
       out: { type: 'string' },
+      mirasim: { type: 'string' },
       help: { type: 'boolean', short: 'h', default: false },
     },
   });
@@ -60,40 +66,88 @@ export async function share(args: string[]): Promise<number> {
 
   const prices = loadPrices();
   const result = await collect({ prices, since });
-  const files = usageFiles(result.calls, handle, config.device, pricesDate(prices));
-  const calls = result.calls.length;
-  const days = files.map((f) => f.file.date);
+
+  // handles.json lives on the data branch (or in --out), so fetch it before splitting by person.
+  let data: DataBranch | undefined;
+  let handles: Handles = { schema: 1, people: {} };
+  try {
+    if (values.out) {
+      handles = loadHandles(values.out);
+    } else if (repo) {
+      data = new DataBranch(repo);
+      data.sync();
+      handles = loadHandles(data.dir);
+    }
+  } catch (e: any) {
+    console.error(`agent-bill share: git failed\n${e.stderr ?? e.message}`);
+    return 1;
+  }
+  const joined = values.mirasim ? addMirasim(handles, handle, values.mirasim) : false;
+
+  const { byHandle, leftOut } = splitByPerson(result.calls, handle, loadStarters(), handles);
+  const files = [...byHandle].flatMap(([h, calls]) => usageFiles(calls, h, config.device, pricesDate(prices)));
+  const calls = files.reduce((n, f) => n + f.file.rows.reduce((m, r) => m + r.calls, 0), 0);
+  const days = files.map((f) => f.file.date).sort();
   const range = days.length ? `${days[0]}..${days.at(-1)}` : 'no days';
+  const people = [...byHandle.keys()].join(', ') || handle;
+  const notes = leftOutNotes(leftOut);
 
   if (dryRun) {
     for (const { path, file } of files) console.log(`── ${path}\n${render(file)}`);
-    console.log(`\nWould write ${files.length} file(s) (${calls} calls, ${range}) to ${repo ? `${repo}, branch ${BRANCH}` : values.out ?? '(no repo set yet)'}.`);
+    if (joined) console.log(`── handles.json\n${JSON.stringify(handles, null, 2)}\n`);
+    console.log(`\nWould write ${files.length} file(s) for ${people} (${calls} calls, ${range}) to ${repo ? `${repo}, branch ${BRANCH}` : values.out ?? '(no repo set yet)'}.`);
+    notes.forEach((n) => console.log(n));
     console.log('Dry run: nothing was written.');
     return 0;
   }
 
   if (values.out) {
     for (const { path, file } of files) write(join(values.out, path), file);
-    console.log(`Wrote ${files.length} file(s) (${calls} calls, ${range}) to ${values.out}.`);
+    if (joined) saveHandles(values.out, handles);
+    console.log(`Wrote ${files.length} file(s) for ${people} (${calls} calls, ${range}) to ${values.out}.`);
+    notes.forEach((n) => console.log(n));
     return 0;
   }
 
-  const data = new DataBranch(repo!);
   try {
-    data.sync();
-    for (const { path, file } of files) write(join(data.dir, path), file);
-    const outcome = files.length
-      ? data.publish([`usage/${handle}`], `usage: ${handle} ${range}`)
-      : 'unchanged';
+    for (const { path, file } of files) write(join(data!.dir, path), file);
+    if (joined) saveHandles(data!.dir, handles);
+    const paths = [...[...byHandle.keys()].map((h) => `usage/${h}`), ...(joined ? ['handles.json'] : [])];
+    const outcome = paths.length ? data!.publish(paths, `usage: ${people} ${range}`) : 'unchanged';
     console.log(outcome === 'pushed'
-      ? `Shared ${files.length} file(s) (${calls} calls, ${range}) to ${repo}, branch ${BRANCH}.`
+      ? `Shared ${files.length} file(s) for ${people} (${calls} calls, ${range}) to ${repo}, branch ${BRANCH}.`
       : `Nothing new to share (${range}).`);
+    notes.forEach((n) => console.log(n));
   } catch (e: any) {
     console.error(`agent-bill share: git failed\n${e.stderr ?? e.message}`);
     return 1;
   }
   saveConfig({ ...config, handle, repo });
   return 0;
+}
+
+// Off Mirasim every call is the person running share. On Mirasim a call belongs to whoever started
+// its turn, if they are in handles.json; calls with no recorded starter are the person running share.
+export function splitByPerson(calls: Call[], me: string, starters: Starters | undefined, handles: Handles) {
+  const byHandle = new Map<string, Call[]>();
+  const leftOut = new Map<string, number>();
+  const handleOf = handleByMirasim(handles);
+  for (const c of calls) {
+    const email = starters?.at(c.agent, c.sessionId, c.ts)?.toLowerCase();
+    const h = email ? handleOf.get(email) : me;
+    if (h) byHandle.set(h, [...(byHandle.get(h) ?? []), c]);
+    else leftOut.set(email!, (leftOut.get(email!) ?? 0) + 1);
+  }
+  return { byHandle, leftOut };
+}
+
+function leftOutNotes(leftOut: Map<string, number>): string[] {
+  if (!leftOut.size) return [];
+  return [
+    `Left out ${[...leftOut.values()].reduce((a, b) => a + b, 0)} call(s) from Mirasim sessions started by people not in handles.json:`,
+    ...[...leftOut].map(([email, n]) => `  ${email}: ${n} call(s)`),
+    'Each of them can join with: agent-bill share --mirasim <their Mirasim email>',
+  ];
 }
 
 export function usageFiles(calls: Call[], handle: string, device: string, prices: string): { path: string; file: UsageFile }[] {

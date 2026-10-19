@@ -9,7 +9,7 @@ import { BRANCH, DataBranch } from '../src/datadir.ts';
 import { emptyTokens, type Call } from '../src/types.ts';
 
 const call = (date: string, extra: Partial<Call> = {}): Call => ({
-  agent: 'claude-code', sessionId: 'secret-session', date, model: 'claude-opus-5-5',
+  agent: 'claude-code', sessionId: 'secret-session', ts: `${date}T10:00:00Z`, date, model: 'claude-opus-5-5',
   repo: 'github.com/acme/shop-api', branch: 'main', sidechain: false,
   tokens: { ...emptyTokens(), input: 10, output: 20 }, costUsd: 0.001, ...extra,
 });

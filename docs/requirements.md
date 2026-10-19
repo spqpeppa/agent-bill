@@ -50,7 +50,7 @@ Agents write some log lines more than once: Claude Code repeats a streamed reply
 
 ### 4.2 `share`
 
-Writes the person's rows to a shared place the team already has, with no server: an `agent-bill-data` branch in a git repo the team chooses (decision 1), one file per person, device and day at `usage/<handle>/<device>/<YYYY-MM-DD>.json`. Re-running `share` rewrites the same files, so it is safe to run as often as you like. It rewrites the last 7 days by default, because agents delete old logs and an old day would come back incomplete. `--dry-run` prints exactly what would be written and touches nothing. The file format is in [data-format.md](data-format.md).
+Writes the person's rows to a shared place the team already has, with no server: an `agent-bill-data` branch in a git repo the team chooses (decision 1), one file per person, device and day at `usage/<handle>/<device>/<YYYY-MM-DD>.json`. Re-running `share` rewrites the same files, so it is safe to run as often as you like. It rewrites the last 7 days by default, because agents delete old logs and an old day would come back incomplete. `--dry-run` prints exactly what would be written and never pushes. The file format is in [data-format.md](data-format.md).
 
 **Shared machines.** In a Mirasim space several people drive agents as the same OS user, so the logs alone would put everyone's usage under one name. There, `share` reads the space's record of who started each session and splits the rows by person. It only writes files for people who have added themselves to `handles.json` on the data branch; adding yourself is how you opt in.
 

@@ -1,0 +1,7 @@
+{"t":"creator","k":"claude:cc-shared","by":{"userId":"u1","email":"ann@example.com","label":"ann","role":"admin"},"at":1792400000000}
+{"t":"turn","k":"claude:cc-shared","id":"t1","by":{"userId":"u1","email":"ann@example.com","label":"ann","role":"admin"},"at":1792400000000,"x":""}
+{"t":"end","k":"claude:cc-shared","id":"t1","o":"done","at":1792400060000}
+{"t":"turn","k":"claude:cc-shared","id":"t2","by":{"userId":"u2","email":"Bob@Example.com","label":"bob","role":"member"},"at":1792400100000,"x":""}
+{"t":"end","k":"claude:cc-shared","id":"t2","o":"done","at":1792400160000}
+{"t":"turn","k":"codex:mx-codex","id":"t3","by":{"userId":"u3","email":"cat@example.com","label":"cat","role":"member"},"at":1792400000000,"x":""}
+not json
