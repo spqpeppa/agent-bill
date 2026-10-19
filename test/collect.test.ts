@@ -101,7 +101,9 @@ test('git remotes normalise to host/org/repo', () => {
     'https://github.com/acme/shop-api',
     'ssh://git@github.com:22/acme/shop-api.git',
     'https://user:token@github.com/acme/shop-api.git/',
+    'https://relay.mirasim.ai/v2/gateway/git/github.com/acme/shop-api.git',
   ]) assert.equal(normalizeRemote(url), 'github.com/acme/shop-api', url);
+  assert.equal(normalizeRemote('https://git.example.com/acme/shop-api.git'), 'git.example.com/acme/shop-api');
 });
 
 test('price overrides are applied', () => {

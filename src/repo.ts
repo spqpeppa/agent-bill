@@ -25,7 +25,7 @@ export function repoOf(cwd: string | undefined): string {
 }
 
 export function normalizeRemote(url: string): string {
-  return url
+  const repo = url
     .replace(/^[a-z+]+:\/\//, '')
     .replace(/^[^@/]+@/, '')
     .replace(/^([^/:]+):(?!\d+\/)/, '$1/')
@@ -33,4 +33,11 @@ export function normalizeRemote(url: string): string {
     .replace(/\.git\/?$/, '')
     .replace(/\/$/, '')
     .toLowerCase();
+  // A git proxy puts the real remote in its path ('relay.mirasim.ai/v2/gateway/git/github.com/org/repo'),
+  // so the same repo would otherwise show up under two names.
+  const segments = repo.split('/');
+  const forge = segments.findIndex((s, i) => i > 0 && FORGES.has(s));
+  return forge > 0 ? segments.slice(forge).join('/') : repo;
 }
+
+const FORGES = new Set(['github.com', 'gitlab.com', 'bitbucket.org', 'codeberg.org']);
