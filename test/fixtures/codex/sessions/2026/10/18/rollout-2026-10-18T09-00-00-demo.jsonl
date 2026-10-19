@@ -1,0 +1,7 @@
+{"timestamp":"2026-10-18T09:00:00.000Z","type":"session_meta","payload":{"id":"cx-demo","cwd":"/nonexistent/shop-api","originator":"codex_cli_rs","git":{"branch":"feat/cart","repository_url":"git@github.com:acme/shop-api.git"}}}
+{"timestamp":"2026-10-18T09:00:01.000Z","type":"turn_context","payload":{"model":"gpt-5.6","cwd":"/nonexistent/shop-api"}}
+{"timestamp":"2026-10-18T09:00:05.000Z","type":"event_msg","payload":{"type":"token_count","info":{"total_token_usage":{"input_tokens":10000,"cached_input_tokens":8000,"output_tokens":500,"reasoning_output_tokens":200,"total_tokens":10500}}}}
+{"timestamp":"2026-10-18T09:00:05.100Z","type":"event_msg","payload":{"type":"token_count","info":{"total_token_usage":{"input_tokens":10000,"cached_input_tokens":8000,"output_tokens":500,"reasoning_output_tokens":200,"total_tokens":10500}}}}
+{"timestamp":"2026-10-18T09:01:00.000Z","type":"event_msg","payload":{"type":"token_count","info":{"total_token_usage":{"input_tokens":25000,"cached_input_tokens":20000,"output_tokens":1500,"reasoning_output_tokens":600,"total_tokens":26500}}}}
+{"timestamp":"2026-10-18T09:01:00.000Z","type":"response_item","payload":{"type":"message","role":"assistant","content":[{"type":"output_text","text":"never read"}]}}
+{"timestamp":"2026-10-18T09:01:01.000Z","type":"event_msg","payload":{"type":"token_count","info":null}}

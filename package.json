@@ -1,0 +1,39 @@
+{
+  "name": "agent-bill",
+  "version": "0.1.0",
+  "description": "What your team's coding agents cost, per person, repo, branch and merged PR, from the logs Claude Code and Codex already keep.",
+  "license": "MIT",
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/spqpeppa/agent-bill.git"
+  },
+  "keywords": [
+    "claude-code",
+    "codex",
+    "usage",
+    "cost",
+    "tokens",
+    "team"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "bin": {
+    "agent-bill": "dist/cli.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json && node scripts/copy-assets.ts",
+    "check": "tsc -p .",
+    "test": "node --test test/*.test.ts",
+    "prices": "node scripts/update-prices.ts",
+    "prepack": "npm run build"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.5",
+    "typescript": "^7.0.2"
+  }
+}

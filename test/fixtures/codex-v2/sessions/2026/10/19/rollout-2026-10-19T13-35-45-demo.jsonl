@@ -1,0 +1,7 @@
+{"timestamp":"2026-10-19T13:35:45.000Z","type":"session_meta","payload":{"id":"cx-v2","cwd":"/nonexistent/probe","originator":"mirasim","git":{"branch":"feat/probe","repository_url":"git@github.com:Acme/Probe-Repo.git"}}}
+{"timestamp":"2026-10-19T13:35:46.000Z","type":"turn_context","payload":{"model":"gpt-5.6","cwd":"/nonexistent/probe"}}
+{"timestamp":"2026-10-19T13:35:51.733Z","type":"token_usage_record","payload":{"session_id":"cx-v2","response_id":"resp_1","usage":{"input_tokens":13929,"cached_input_tokens":12160,"cache_write_input_tokens":0,"output_tokens":202,"reasoning_output_tokens":0,"total_tokens":14131}}}
+{"timestamp":"2026-10-19T13:35:51.962Z","type":"event_msg","payload":{"type":"token_count","info":{"total_token_usage":{"input_tokens":13929,"cached_input_tokens":12160,"output_tokens":202,"reasoning_output_tokens":0,"total_tokens":14131}}}}
+{"timestamp":"2026-10-19T13:35:56.613Z","type":"token_usage_record","payload":{"session_id":"cx-v2","response_id":"resp_2","usage":{"input_tokens":14997,"cached_input_tokens":12160,"cache_write_input_tokens":1000,"output_tokens":166,"reasoning_output_tokens":55,"total_tokens":15163}}}
+{"timestamp":"2026-10-19T13:35:56.616Z","type":"event_msg","payload":{"type":"token_count","info":{"total_token_usage":{"input_tokens":28926,"cached_input_tokens":24320,"output_tokens":368,"reasoning_output_tokens":55,"total_tokens":29294}}}}
+{"timestamp":"2026-10-19T13:35:57.000Z","type":"response_item","payload":{"type":"message","role":"assistant","content":[{"type":"output_text","text":"never read"}]}}
