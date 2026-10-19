@@ -4,6 +4,7 @@ import { parseArgs } from 'node:util';
 import { localDate } from '../collect.ts';
 import { loadConfig } from '../config.ts';
 import { BRANCH, DataBranch } from '../datadir.ts';
+import { githubToken, mergedPrs, type PullRequest } from '../prs.ts';
 import { loadPrs, loadUsage } from '../report/load.ts';
 import { COLLECTOR } from '../version.ts';
 
@@ -13,10 +14,15 @@ Builds one HTML file, readable offline, from everyone's shared totals: the team'
 day, person, repo, agent and model; unusually expensive days; most expensive branches; and the
 cost of each merged pull request.
 
+Pull requests are found on GitHub by branch name, with $GITHUB_TOKEN or the GitHub CLI's login
+(gh auth login). Only repo and branch names are sent to GitHub. Without a token, the report shows
+cost per branch and says how to turn PR matching on.
+
   --repo URL   the team repo whose ${BRANCH} branch to read (default: the one share remembers)
   --data DIR   read a folder in the same layout instead (for example, agent-bill demo's output)
   --out FILE   default: agent-bill-report.html
-  --as-of DATE the day the report treats as today; default: today`;
+  --as-of DATE the day the report treats as today; default: today
+  --no-prs     don't look pull requests up on GitHub`;
 
 export async function report(args: string[]): Promise<number> {
   const { values } = parseArgs({
@@ -26,6 +32,7 @@ export async function report(args: string[]): Promise<number> {
       data: { type: 'string' },
       out: { type: 'string', default: 'agent-bill-report.html' },
       'as-of': { type: 'string', default: localDate(new Date()) },
+      'no-prs': { type: 'boolean', default: false },
       help: { type: 'boolean', short: 'h', default: false },
     },
   });
@@ -59,7 +66,30 @@ export async function report(args: string[]): Promise<number> {
   }
 
   const usage = loadUsage(dir);
-  const prs = loadPrs(dir);
+  // prs.json in the data wins (the demo ships one); otherwise ask GitHub.
+  let prs: PullRequest[] | undefined = loadPrs(dir);
+  let prNote: string | null = null;
+  if (!prs) {
+    const token = values['no-prs'] ? undefined : githubToken();
+    if (values['no-prs']) {
+      prNote = 'Pull request matching was turned off for this report (--no-prs).';
+    } else if (!token) {
+      prNote = 'Pull request matching is off: no GitHub token. Set GITHUB_TOKEN, or sign in with gh auth login, and build the report again.';
+    } else {
+      const branches = usage.rows.filter((r) => r.branch).map((r) => ({ repo: r.repo, branch: r.branch! }));
+      try {
+        const found = await mergedPrs(branches, token);
+        prs = found.prs;
+        const notes = [];
+        if (found.skipped) notes.push(`${found.skipped} branch(es) were not looked up (limit reached)`);
+        if (found.failed.length) notes.push(`no access to ${found.failed.join(', ')}`);
+        if (notes.length) prNote = `Some pull requests may be missing: ${notes.join('; ')}.`;
+        console.log(`Looked up ${found.looked} branch(es) on GitHub: ${found.prs.length} merged pull request(s).`);
+      } catch (e: any) {
+        prNote = `Pull request matching failed: ${e.message}`;
+      }
+    }
+  }
   const payload = {
     source,
     collector: COLLECTOR,
@@ -69,7 +99,7 @@ export async function report(args: string[]): Promise<number> {
     skipped: usage.skipped,
     rows: usage.rows,
     prs: prs ?? null,
-    prNote: prs ? null : 'Pull request matching is off: no prs.json in the data.',
+    prNote,
   };
   writeFileSync(values.out!, renderHtml(payload));
 
