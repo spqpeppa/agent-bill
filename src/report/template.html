@@ -88,6 +88,7 @@ header p { margin: 0; color: var(--text-secondary); }
 .hero .value { font-size: 48px; line-height: 1.1; }
 .tile .delta { color: var(--text-secondary); font-size: 13px; margin-top: 4px; }
 
+#daily svg { display: block; max-width: 100%; height: auto; }
 svg text { fill: var(--text-muted); font-size: 11px; font-variant-numeric: tabular-nums; }
 .gridline { stroke: var(--grid); stroke-width: 1; }
 .baseline { stroke: var(--axis); stroke-width: 1; }
@@ -505,7 +506,8 @@ function header() {
   const f = $('footer');
   f.replaceChildren(
     el('p', { text: `Costs are estimates at API list price (price table of ${DATA.prices.join(', ') || 'unknown date'}). People on a subscription see what the same usage would cost through the API, not their bill. Batch, priority-tier and negotiated discounts are not in the logs.` }),
-    el('p', { text: `Built ${new Date(DATA.generatedAt).toLocaleString('en')} by ${DATA.collector}. Weeks run Monday to Sunday.` }),
+    el('p', {}, `Built ${new Date(DATA.generatedAt).toLocaleString('en')} by ${DATA.collector} (`,
+      el('a', { href: 'https://github.com/spqpeppa/agent-bill', text: 'github.com/spqpeppa/agent-bill' }), '). Weeks run Monday to Sunday.'),
   );
   if (DATA.rows.some((r) => r.unpricedCalls)) f.append(el('p', { text: '* Some calls used a model the price table does not know; their cost is not included.' }));
   if (DATA.skipped.length) f.append(el('p', { text: `${DATA.skipped.length} file(s) were skipped because this version cannot read them.` }));
@@ -527,8 +529,13 @@ function periods() {
 header();
 periods();
 render();
-let resize;
-addEventListener('resize', () => { clearTimeout(resize); resize = setTimeout(renderDaily, 100); });
+// Redraw the daily chart whenever its card changes width (window resize, or a host frame that
+// settles its size after the page has loaded).
+let drawnWidth = $('daily').clientWidth;
+new ResizeObserver(() => {
+  const w = $('daily').clientWidth;
+  if (w && w !== drawnWidth) { drawnWidth = w; renderDaily(); }
+}).observe($('daily'));
 </script>
 </body>
 </html>
