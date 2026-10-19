@@ -467,6 +467,7 @@ function renderPrs() {
     table('prs', [], [], []);
     return;
   }
+  if (DATA.prNote) $('prs-hint').textContent = `Merged in this period. Cost is all usage on the PR's branch up to the day it merged. ${DATA.prNote}`;
   const merged = DATA.prs.filter((p) => p.mergedAt.slice(0, 10) >= period.from && p.mergedAt.slice(0, 10) <= period.to)
     .map((p) => ({ p, rows: branchCost(p.repo, p.branch, p.mergedAt.slice(0, 10)) }))
     .sort((a, b) => sum(b.rows).cost - sum(a.rows).cost);
