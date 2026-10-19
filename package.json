@@ -31,7 +31,8 @@
     "test": "node --test test/*.test.ts",
     "prices": "node scripts/update-prices.ts",
     "prepack": "npm run build",
-    "prototype": "node src/cli.ts demo --out /tmp/agent-bill-prototype --end 2026-10-19 && node src/cli.ts report --data /tmp/agent-bill-prototype --as-of 2026-10-19 --out docs/prototype/index.html"
+    "prototype": "node src/cli.ts demo --out /tmp/agent-bill-prototype --end 2026-10-19 && node src/cli.ts report --data /tmp/agent-bill-prototype --as-of 2026-10-19 --out docs/prototype/index.html",
+    "site": "sh scripts/site/build.sh"
   },
   "devDependencies": {
     "@types/node": "^26.6.5",

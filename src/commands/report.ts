@@ -8,7 +8,7 @@ import { githubToken, mergedPrs, type PullRequest } from '../prs.ts';
 import { loadPrs, loadUsage } from '../report/load.ts';
 import { COLLECTOR } from '../version.ts';
 
-const HELP = `usage: agent-bill report [--repo URL | --data DIR] [--out FILE] [--as-of YYYY-MM-DD]
+const HELP = `usage: agent-bill report [--repo URL | --data DIR] [--out FILE] [--as-of YYYY-MM-DD] [--no-prs] [--label TEXT]
 
 Builds one HTML file, readable offline, from everyone's shared totals: the team's spend by week,
 day, person, repo, agent and model; unusually expensive days; most expensive branches; and the
@@ -22,7 +22,8 @@ cost per branch and says how to turn PR matching on.
   --data DIR   read a folder in the same layout instead (for example, agent-bill demo's output)
   --out FILE   default: agent-bill-report.html
   --as-of DATE the day the report treats as today; default: today
-  --no-prs     don't look pull requests up on GitHub`;
+  --no-prs     don't look pull requests up on GitHub
+  --label TEXT what the page says the data is (default: where it was read from)`;
 
 export async function report(args: string[]): Promise<number> {
   const { values } = parseArgs({
@@ -33,6 +34,7 @@ export async function report(args: string[]): Promise<number> {
       out: { type: 'string', default: 'agent-bill-report.html' },
       'as-of': { type: 'string', default: localDate(new Date()) },
       'no-prs': { type: 'boolean', default: false },
+      label: { type: 'string' },
       help: { type: 'boolean', short: 'h', default: false },
     },
   });
@@ -91,7 +93,7 @@ export async function report(args: string[]): Promise<number> {
     }
   }
   const payload = {
-    source,
+    source: values.label ?? source,
     collector: COLLECTOR,
     today: values['as-of'],
     generatedAt: new Date().toISOString(),

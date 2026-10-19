@@ -5,3 +5,7 @@ coverage/
 .DS_Store
 # real usage data never goes in this repo
 /data/
+
+# online demo build output and Mirasim publishing state
+/site/
+/.mirasim/
