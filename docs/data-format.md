@@ -80,7 +80,7 @@ There is one row per agent × model × repo × branch. A file never contains pro
 }
 ```
 
-Adding your handle here is how you take part. It matters on shared machines: in a Mirasim space, everyone drives agents as the same OS user, so `share` uses the space's record of who started each session (`~/.mirasim/collab/turns.jsonl`) and writes each person's rows under their handle. It writes rows only for people listed here, matched by their Mirasim account email. It counts the rest and leaves them out, and `--dry-run` says how many calls were left out and why. Sessions with no recorded starter go to the person running `share`.
+Adding your handle here is how you take part; `agent-bill share --mirasim <your Mirasim email>` adds you. It matters on shared machines: in a Mirasim space, everyone drives agents as the same OS user, so `share` uses the space's record of who started each session (`~/.mirasim/collab/turns.jsonl`) and writes each person's rows under their handle. It writes rows only for people listed here, matched by their Mirasim account email. It counts the rest and leaves them out, and `--dry-run` says how many calls were left out and why. Sessions with no recorded starter (for example, ones another agent started) go to the person running `share`.
 
 ## Reading rules (`report`)
 

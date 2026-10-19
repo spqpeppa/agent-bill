@@ -36,6 +36,7 @@ export interface Call {
   agent: string;
   client?: string;
   sessionId: string;
+  ts: string;                // ISO timestamp, local only: picks the Mirasim turn the call belongs to
   date: string;              // local YYYY-MM-DD
   model: string;
   repo: string;              // 'github.com/org/repo', or 'local:<folder>' with no remote

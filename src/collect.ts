@@ -48,6 +48,7 @@ export async function collect(opts: CollectOptions): Promise<CollectResult> {
       agent: e.agent,
       client: e.client,
       sessionId: e.sessionId,
+      ts: e.ts,
       date: localDate(new Date(e.ts)),
       model: baseModel(e.model),
       repo: e.remote ? normalizeRemote(e.remote) : repoOf(e.cwd),
