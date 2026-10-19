@@ -4,7 +4,7 @@
 
 Agent Bill shows what your team's coding agents cost: per person, per repo, per branch, and per merged pull request. It reads the logs Claude Code and Codex already keep on each laptop. No proxy, no telemetry stack, no server.
 
-> **Status: being built in the open, October 2026.** There is nothing to install yet. Start with the [requirements draft](docs/requirements.md) and open an issue if something you need is missing.
+> **Status: being built in the open, October 2026.** There is nothing to install yet. Start with the [requirements](docs/requirements.md) and open an issue if something you need is missing.
 
 ## Why
 
@@ -19,11 +19,13 @@ Agent Bill sits in between. It gives a team view with nothing to run.
 ```sh
 npx agent-bill scan              # read local Claude Code and Codex logs, show your own totals
 npx agent-bill share --dry-run   # show exactly what would leave your laptop
-npx agent-bill share             # write your daily totals to the team's data branch
+npx agent-bill share --repo https://github.com/your-org/your-repo
+                                 # write your daily totals to that repo's agent-bill-data branch
+                                 # (the first time; later runs remember the repo and your handle)
 npx agent-bill report            # build one offline HTML dashboard from everyone's totals
 ```
 
-Only totals leave your laptop: date, your chosen handle, agent, model, repo, branch, token counts and estimated cost. Prompts, outputs, code and file paths never do.
+Only daily totals leave your laptop: date, your chosen handle, agent, model, repo, branch, call count, token counts and estimated cost. Prompts, outputs, code, file paths and session ids never do.
 
 ## Planned for v0.1
 
