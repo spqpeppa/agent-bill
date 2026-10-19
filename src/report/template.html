@@ -1,0 +1,533 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Agent Bill</title>
+<style>
+.viz-root {
+  color-scheme: light;
+  --page: #f9f9f7;
+  --surface-1: #fcfcfb;
+  --text-primary: #0b0b0b;
+  --text-secondary: #52514e;
+  --text-muted: #898781;
+  --grid: #e1e0d9;
+  --axis: #c3c2b7;
+  --border: rgba(11, 11, 11, 0.10);
+  --series-1: #2a78d6;
+  --muted-mark: #c3c2b7;
+  --wash: #f0efec;
+  --good-text: #006300;
+  --critical: #d03b3b;
+  --serious: #ec835a;
+}
+@media (prefers-color-scheme: dark) {
+  :root:where(:not([data-theme="light"])) .viz-root {
+    color-scheme: dark;
+    --page: #0d0d0d;
+    --surface-1: #1a1a19;
+    --text-primary: #f0efec;
+    --text-secondary: #c3c2b7;
+    --grid: #2c2c2a;
+    --axis: #383835;
+    --border: rgba(255, 255, 255, 0.10);
+    --series-1: #3987e5;
+    --muted-mark: #4a4a46;
+    --wash: #262624;
+    --good-text: #0ca30c;
+  }
+}
+:root[data-theme="dark"] .viz-root {
+  color-scheme: dark;
+  --page: #0d0d0d;
+  --surface-1: #1a1a19;
+  --text-primary: #f0efec;
+  --text-secondary: #c3c2b7;
+  --grid: #2c2c2a;
+  --axis: #383835;
+  --border: rgba(255, 255, 255, 0.10);
+  --series-1: #3987e5;
+  --muted-mark: #4a4a46;
+  --wash: #262624;
+  --good-text: #0ca30c;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; }
+.viz-root {
+  min-height: 100vh;
+  background: var(--page);
+  color: var(--text-primary);
+  font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif;
+  padding: 24px 16px 48px;
+}
+.wrap { max-width: 1080px; margin: 0 auto; }
+header h1 { font-size: 20px; margin: 0 0 4px; font-weight: 600; }
+header p { margin: 0; color: var(--text-secondary); }
+.filters { display: flex; flex-wrap: wrap; gap: 4px; margin: 20px 0 16px; }
+.filters button {
+  font: inherit; color: var(--text-secondary); background: transparent;
+  border: 1px solid var(--border); border-radius: 999px; padding: 4px 12px; cursor: pointer;
+}
+.filters button:hover { background: var(--wash); }
+.filters button[aria-checked="true"] { color: var(--text-primary); background: var(--surface-1); font-weight: 600; border-color: var(--axis); }
+.card { background: var(--surface-1); border: 1px solid var(--border); border-radius: 12px; padding: 16px 20px; margin-bottom: 16px; min-width: 0; }
+.card h2 { font-size: 15px; font-weight: 600; margin: 0 0 2px; }
+.card .hint { color: var(--text-secondary); margin: 0 0 12px; font-size: 13px; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.grid2 > .card { margin-bottom: 0; }
+.grid2 { margin-bottom: 16px; }
+@media (max-width: 720px) { .grid2 { grid-template-columns: 1fr; } }
+
+.kpis { display: grid; grid-template-columns: 2fr repeat(3, 1fr); gap: 16px; margin-bottom: 16px; }
+@media (max-width: 720px) { .kpis { grid-template-columns: 1fr 1fr; } .kpis .hero { grid-column: 1 / -1; } }
+.tile { background: var(--surface-1); border: 1px solid var(--border); border-radius: 12px; padding: 16px 20px; }
+.tile .label { color: var(--text-secondary); font-size: 13px; }
+.tile .value { font-size: 24px; font-weight: 600; margin-top: 4px; }
+.hero .value { font-size: 48px; line-height: 1.1; }
+.tile .delta { color: var(--text-secondary); font-size: 13px; margin-top: 4px; }
+
+svg text { fill: var(--text-muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+.gridline { stroke: var(--grid); stroke-width: 1; }
+.baseline { stroke: var(--axis); stroke-width: 1; }
+.col { fill: var(--series-1); }
+.col.context { fill: var(--muted-mark); }
+.col:hover, .col:focus { opacity: 0.8; outline: none; }
+.legend { display: flex; gap: 16px; color: var(--text-secondary); font-size: 12px; margin-top: 8px; }
+.legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: -1px; }
+
+.bars { display: grid; grid-template-columns: minmax(64px, max-content) 1fr; gap: 8px 12px; align-items: center; }
+.bars .name { color: var(--text-secondary); overflow-wrap: anywhere; }
+.bars .track { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.bars .bar { height: 16px; background: var(--series-1); border-radius: 0 4px 4px 0; min-width: 2px; flex: none; }
+.bars .bar:hover, .bars .bar:focus { opacity: 0.8; outline: none; }
+.bars .amount { color: var(--text-primary); font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.scroll { overflow-x: auto; }
+th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--grid); white-space: nowrap; }
+th { color: var(--text-secondary); font-weight: 500; font-size: 13px; }
+td.num, th.num { text-align: right; }
+td.wrap { white-space: normal; min-width: 180px; }
+tr:last-child td { border-bottom: none; }
+a { color: inherit; }
+.empty { color: var(--text-secondary); margin: 0; }
+details { margin-top: 12px; }
+summary { color: var(--text-secondary); cursor: pointer; font-size: 13px; }
+
+.flag { display: flex; gap: 10px; align-items: baseline; padding: 6px 0; border-bottom: 1px solid var(--grid); }
+.flag:last-child { border-bottom: none; }
+.flag .icon { color: var(--critical); font-weight: 700; }
+.flag .what { flex: 1; }
+.flag .why { color: var(--text-secondary); }
+
+footer { color: var(--text-secondary); font-size: 12px; margin-top: 24px; }
+footer p { margin: 4px 0; }
+
+#tip {
+  position: fixed; pointer-events: none; z-index: 10; display: none;
+  background: var(--surface-1); color: var(--text-primary); border: 1px solid var(--border);
+  border-radius: 8px; padding: 8px 10px; font-size: 12px; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+}
+#tip strong { display: block; font-size: 14px; }
+#tip span { color: var(--text-secondary); }
+</style>
+</head>
+<body>
+<div class="viz-root">
+<div class="wrap">
+  <header>
+    <h1>Agent Bill</h1>
+    <p id="sub"></p>
+  </header>
+
+  <div class="filters" role="radiogroup" aria-label="Period" id="periods"></div>
+
+  <section class="kpis" aria-label="Summary">
+    <div class="tile hero"><div class="label" id="hero-label">Team spend</div><div class="value" id="hero"></div><div class="delta" id="hero-delta"></div></div>
+    <div class="tile"><div class="label">API calls</div><div class="value" id="k-calls"></div></div>
+    <div class="tile"><div class="label">Prompt tokens from cache</div><div class="value" id="k-cache"></div></div>
+    <div class="tile"><div class="label">People</div><div class="value" id="k-people"></div></div>
+  </section>
+
+  <section class="card">
+    <h2>Daily spend</h2>
+    <p class="hint" id="daily-hint"></p>
+    <div id="daily"></div>
+    <div class="legend" id="daily-legend"></div>
+    <details><summary>Show as a table</summary><div class="scroll"><table id="daily-table"></table></div></details>
+  </section>
+
+  <div class="grid2">
+    <section class="card">
+      <h2>By person</h2>
+      <p class="hint">In name order. Cost includes every device the person shared from.</p>
+      <div class="bars" id="people"></div>
+    </section>
+    <section class="card">
+      <h2>By repo</h2>
+      <p class="hint">Highest first. <code>local:</code> means a folder with no git remote.</p>
+      <div class="bars" id="repos"></div>
+    </section>
+  </div>
+
+  <section class="card">
+    <h2>Unusually expensive days</h2>
+    <p class="hint">Days when a person spent at least 3× their usual day (the median of their days with usage) and at least $10.</p>
+    <div id="flags"></div>
+  </section>
+
+  <section class="card">
+    <h2>By agent and model</h2>
+    <p class="hint">Sub-agent calls are included in the calls column.</p>
+    <div class="scroll"><table id="models"></table></div>
+  </section>
+
+  <section class="card">
+    <h2>Merged pull requests</h2>
+    <p class="hint" id="prs-hint">Merged in this period. Cost is all usage on the PR's branch up to the day it merged.</p>
+    <div class="scroll"><table id="prs"></table></div>
+  </section>
+
+  <section class="card">
+    <h2>Most expensive branches</h2>
+    <p class="hint">Top 10 in this period.</p>
+    <div class="scroll"><table id="branches"></table></div>
+  </section>
+
+  <footer id="footer"></footer>
+</div>
+<div id="tip" role="tooltip"></div>
+</div>
+
+<script id="data" type="application/json">/*DATA*/null</script>
+<script>
+'use strict';
+const DATA = JSON.parse(document.getElementById('data').textContent);
+const $ = (id) => document.getElementById(id);
+
+// ── dates ────────────────────────────────────────────────────────────────
+const parse = (s) => new Date(`${s}T12:00:00`);
+const iso = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+const addDays = (s, n) => { const d = parse(s); d.setDate(d.getDate() + n); return iso(d); };
+const monday = (s) => { const d = parse(s); return addDays(s, -((d.getDay() + 6) % 7)); };
+const span = (a, b) => Math.round((parse(b) - parse(a)) / 864e5) + 1;
+const fmtDay = (s) => parse(s).toLocaleDateString('en', { weekday: 'short', day: 'numeric', month: 'short' });
+const fmtShort = (s) => parse(s).toLocaleDateString('en', { day: 'numeric', month: 'short' });
+
+const today = DATA.today;
+const first = DATA.rows.length ? DATA.rows[0].date : today;
+const thisMonday = monday(today);
+const PERIODS = [
+  { id: 'week', label: 'This week', from: thisMonday, to: today },
+  { id: 'last', label: 'Last week', from: addDays(thisMonday, -7), to: addDays(thisMonday, -1) },
+  { id: '4w', label: 'Last 4 weeks', from: addDays(thisMonday, -21), to: today },
+  { id: 'all', label: 'All', from: first < today ? first : today, to: today },
+];
+
+// ── numbers ──────────────────────────────────────────────────────────────
+const usd = (n) => n >= 10000 ? `$${(n / 1000).toFixed(1)}K` : n >= 100 ? `$${n.toFixed(0)}` : `$${n.toFixed(2)}`;
+const usdExact = (n) => `$${n.toLocaleString('en', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const compact = (n) => n >= 1e9 ? `${(n / 1e9).toFixed(1)}B` : n >= 1e6 ? `${(n / 1e6).toFixed(1)}M` : n >= 1e3 ? `${(n / 1e3).toFixed(1)}K` : String(n);
+const prompt = (t) => t.input + t.cacheRead + t.cacheWrite5m + t.cacheWrite1h;
+const pct = (a, b) => b ? `${Math.round((a / b) * 100)}%` : '–';
+
+function sum(rows) {
+  const s = { cost: 0, calls: 0, sub: 0, unpriced: 0, input: 0, output: 0, cacheRead: 0, cacheWrite: 0, prompt: 0 };
+  for (const r of rows) {
+    s.cost += r.costUsd; s.calls += r.calls; s.sub += r.subagentCalls; s.unpriced += r.unpricedCalls;
+    s.input += r.tokens.input; s.output += r.tokens.output; s.cacheRead += r.tokens.cacheRead;
+    s.cacheWrite += r.tokens.cacheWrite5m + r.tokens.cacheWrite1h; s.prompt += prompt(r.tokens);
+  }
+  return s;
+}
+function groupBy(rows, key) {
+  const m = new Map();
+  for (const r of rows) { const k = key(r); if (!m.has(k)) m.set(k, []); m.get(k).push(r); }
+  return m;
+}
+const within = (p) => DATA.rows.filter((r) => r.date >= p.from && r.date <= p.to);
+
+// ── small DOM helpers (all text goes in through textContent) ─────────────
+function el(tag, attrs, ...kids) {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs || {})) {
+    if (k === 'class') e.className = v; else if (k === 'text') e.textContent = v; else e.setAttribute(k, v);
+  }
+  for (const k of kids) if (k != null) e.append(k);
+  return e;
+}
+function svg(tag, attrs) {
+  const e = document.createElementNS('http://www.w3.org/2000/svg', tag);
+  for (const [k, v] of Object.entries(attrs || {})) e.setAttribute(k, v);
+  return e;
+}
+function table(target, head, rows, numeric) {
+  const t = $(target);
+  t.replaceChildren();
+  const tr = el('tr');
+  head.forEach((h, i) => tr.append(el('th', { class: numeric.includes(i) ? 'num' : '', text: h })));
+  t.append(el('thead', {}, tr));
+  const body = el('tbody');
+  for (const row of rows) {
+    const r = el('tr');
+    row.forEach((c, i) => {
+      const td = el('td', { class: numeric.includes(i) ? 'num' : (i === 1 && head[1] === 'Title' ? 'wrap' : '') });
+      if (c instanceof Node) td.append(c); else td.textContent = c;
+      r.append(td);
+    });
+    body.append(r);
+  }
+  t.append(body);
+}
+
+// ── tooltip ──────────────────────────────────────────────────────────────
+const tip = $('tip');
+function showTip(e, value, lines) {
+  tip.replaceChildren(el('strong', { text: value }), ...lines.map((l) => el('span', {}, el('br'), l)));
+  tip.style.display = 'block';
+  const box = e.target.getBoundingClientRect();
+  const x = e.clientX ?? box.left + box.width / 2;
+  const y = e.clientY ?? box.top;
+  const w = tip.offsetWidth, h = tip.offsetHeight;
+  tip.style.left = `${Math.min(Math.max(8, x - w / 2), innerWidth - w - 8)}px`;
+  tip.style.top = `${y - h - 12 < 8 ? y + 16 : y - h - 12}px`;
+}
+const hideTip = () => { tip.style.display = 'none'; };
+function hoverable(node, value, lines) {
+  node.setAttribute('tabindex', '0');
+  node.setAttribute('aria-label', `${value}, ${lines.join(', ')}`);
+  node.addEventListener('pointermove', (e) => showTip(e, value, lines));
+  node.addEventListener('focus', (e) => showTip(e, value, lines));
+  node.addEventListener('pointerleave', hideTip);
+  node.addEventListener('blur', hideTip);
+}
+
+// ── views ────────────────────────────────────────────────────────────────
+// Early in the week there is little to see yet, so Monday and Tuesday open on last week.
+let period = [1, 2].includes(parse(today).getDay()) && DATA.rows.some((r) => r.date < thisMonday) ? PERIODS[1] : PERIODS[0];
+
+function render() {
+  hideTip();
+  const rows = within(period);
+  const s = sum(rows);
+
+  // Headline: this period against the one just before it, same length.
+  $('hero-label').textContent = `Team spend · ${period.label.toLowerCase()} (${fmtShort(period.from)}–${fmtShort(period.to)})`;
+  $('hero').textContent = usdExact(s.cost);
+  if (period.id === 'all') {
+    $('hero-delta').textContent = `${span(period.from, period.to)} days`;
+  } else {
+    // Against the same days one period back: this week so far vs the same weekdays last week.
+    const back = period.id === '4w' ? 28 : 7;
+    const before = sum(within({ from: addDays(period.from, -back), to: addDays(period.to, -back) })).cost;
+    const than = period.id === 'week' ? 'the same days last week' : period.id === 'last' ? 'the week before' : 'the 4 weeks before';
+    $('hero-delta').textContent = before
+      ? `${s.cost >= before ? '+' : '−'}${Math.abs(Math.round(((s.cost - before) / before) * 100))}% vs ${than} (${usd(before)})`
+      : `Nothing in ${than}`;
+  }
+  $('k-calls').textContent = compact(s.calls);
+  $('k-cache').textContent = pct(s.cacheRead, s.prompt);
+  $('k-people').textContent = String(new Set(rows.map((r) => r.handle)).size);
+
+  renderDaily();
+  renderBars('people', [...groupBy(rows, (r) => r.handle)].sort(([a], [b]) => a.localeCompare(b)));
+  renderBars('repos', [...groupBy(rows, (r) => r.repo)].sort(([, a], [, b]) => sum(b).cost - sum(a).cost));
+  renderFlags();
+  renderModels(rows);
+  renderPrs();
+  renderBranches(rows);
+}
+
+// Columns for the last 28 days (or the whole period, if longer); the chosen period in the
+// accent, the rest as context.
+function renderDaily() {
+  const to = today;
+  const from = period.id === 'all' && span(period.from, to) > 28 ? period.from : [addDays(to, -27), first, period.from].sort()[1];
+  const days = [];
+  for (let d = from; d <= to; d = addDays(d, 1)) days.push(d);
+  const byDay = groupBy(DATA.rows.filter((r) => r.date >= from && r.date <= to), (r) => r.date);
+  const values = days.map((d) => sum(byDay.get(d) || []));
+
+  const box = $('daily');
+  const width = Math.max(240, box.clientWidth || 640);
+  const height = 200, left = 44, right = 4, top = 8, bottom = 22;
+  const max = Math.max(1, ...values.map((v) => v.cost));
+  const step = niceStep(max / 4);
+  const ymax = Math.ceil(max / step) * step;
+  const plotW = width - left - right, plotH = height - top - bottom;
+  const band = plotW / days.length;
+  const barW = Math.min(24, Math.max(2, band - 2));
+  const y = (v) => top + plotH - (v / ymax) * plotH;
+
+  const root = svg('svg', { width, height, viewBox: `0 0 ${width} ${height}`, role: 'img', 'aria-label': 'Daily spend' });
+  for (let v = 0; v <= ymax + 1e-9; v += step) {
+    root.append(svg('line', { class: v === 0 ? 'baseline' : 'gridline', x1: left, x2: width - right, y1: y(v), y2: y(v) }));
+    const t = svg('text', { x: left - 6, y: y(v) + 4, 'text-anchor': 'end' });
+    t.textContent = `$${Number.isInteger(v) ? v.toLocaleString('en') : v.toFixed(2)}`;
+    root.append(t);
+  }
+  days.forEach((d, i) => {
+    const v = values[i];
+    const x = left + i * band + (band - barW) / 2;
+    if (v.cost > 0) {
+      const h = Math.max(1, (v.cost / ymax) * plotH);
+      const r = Math.min(4, h, barW / 2);
+      const y0 = top + plotH;
+      const path = svg('path', {
+        class: d >= period.from && d <= period.to ? 'col' : 'col context',
+        d: `M${x},${y0} V${y0 - h + r} Q${x},${y0 - h} ${x + r},${y0 - h} H${x + barW - r} Q${x + barW},${y0 - h} ${x + barW},${y0 - h + r} V${y0} Z`,
+      });
+      hoverable(path, usdExact(v.cost), [fmtDay(d), `${v.calls.toLocaleString('en')} calls`]);
+      root.append(path);
+    }
+    const dow = parse(d).getDay();
+    if (dow === 1 || days.length <= 10) {
+      // Keep the first and last labels inside the plot instead of clipped at its edges.
+      const cx = x + barW / 2;
+      const anchor = cx > width - right - 24 ? 'end' : 'middle';
+      const t = svg('text', { x: anchor === 'end' ? width - right : cx, y: height - 6, 'text-anchor': anchor });
+      t.textContent = fmtShort(d);
+      root.append(t);
+    }
+  });
+  box.replaceChildren(root);
+
+  $('daily-hint').textContent = `${fmtShort(from)} to ${fmtShort(to)}.${days.length > 10 ? ' Labels mark Mondays.' : ''}`;
+  $('daily-legend').replaceChildren(
+    el('span', {}, el('i', { style: 'background: var(--series-1)' }), period.label),
+    el('span', {}, el('i', { style: 'background: var(--muted-mark)' }), 'Other days'),
+  );
+  table('daily-table', ['Day', 'Calls', 'Cost'],
+    days.map((d, i) => [fmtDay(d), values[i].calls.toLocaleString('en'), usdExact(values[i].cost)]).reverse(), [1, 2]);
+}
+
+function niceStep(raw) {
+  const p = Math.pow(10, Math.floor(Math.log10(raw || 1)));
+  return [1, 2, 2.5, 5, 10].map((m) => m * p).find((s) => s >= raw) || 10 * p;
+}
+
+function renderBars(target, groups) {
+  const box = $(target);
+  box.replaceChildren();
+  if (!groups.length) { box.append(el('p', { class: 'empty', text: 'No usage in this period.' })); return; }
+  const totals = groups.map(([, rows]) => sum(rows));
+  const max = Math.max(...totals.map((t) => t.cost), 1e-9);
+  groups.forEach(([name, rows], i) => {
+    const t = totals[i];
+    const bar = el('div', { class: 'bar', style: `width: calc((100% - 72px) * ${t.cost / max})` });
+    hoverable(bar, usdExact(t.cost), [name, `${t.calls.toLocaleString('en')} calls`, `${pct(t.cacheRead, t.prompt)} of prompt tokens from cache`]);
+    box.append(el('div', { class: 'name', text: name }), el('div', { class: 'track' }, bar, el('span', { class: 'amount', text: usd(t.cost) })));
+  });
+}
+
+function renderFlags() {
+  const box = $('flags');
+  box.replaceChildren();
+  const flags = [];
+  for (const [handle, rows] of groupBy(DATA.rows, (r) => r.handle)) {
+    const days = [...groupBy(rows, (r) => r.date)].map(([date, rs]) => ({ date, cost: sum(rs).cost, rows: rs }));
+    const costs = days.map((d) => d.cost).sort((a, b) => a - b);
+    const median = costs[Math.floor((costs.length - 1) / 2)];
+    for (const d of days) {
+      if (d.date < period.from || d.date > period.to) continue;
+      if (d.cost >= 10 && d.cost >= 3 * median) {
+        const top = [...groupBy(d.rows, (r) => `${r.repo}${r.branch ? ` @ ${r.branch}` : ''}`)].map(([k, rs]) => [k, sum(rs).cost]).sort((a, b) => b[1] - a[1])[0];
+        flags.push({ handle, ...d, median, top });
+      }
+    }
+  }
+  if (!flags.length) { box.append(el('p', { class: 'empty', text: 'None in this period.' })); return; }
+  flags.sort((a, b) => b.cost - a.cost);
+  for (const f of flags) {
+    box.append(el('div', { class: 'flag' },
+      el('span', { class: 'icon', 'aria-hidden': 'true', text: '▲' }),
+      el('span', { class: 'what' }, el('strong', { text: `${f.handle} · ${fmtDay(f.date)} · ${usdExact(f.cost)}` }), ' ',
+        el('span', { class: 'why', text: `${(f.cost / f.median).toFixed(1)}× their usual ${usd(f.median)}; mostly ${f.top[0]} (${usd(f.top[1])})` })),
+    ));
+  }
+}
+
+function renderModels(rows) {
+  const groups = [...groupBy(rows, (r) => `${r.agent}\u0000${r.model}`)].map(([k, rs]) => [k.split('\u0000'), sum(rs)]).sort((a, b) => b[1].cost - a[1].cost);
+  if (!groups.length) { table('models', ['Agent', 'Model'], [], []); return; }
+  table('models', ['Agent', 'Model', 'Calls', 'Sub-agent', 'Output tokens', 'From cache', 'Cost', 'Per call'],
+    groups.map(([[agent, model], s]) => [agent, model + (s.unpriced ? ' *' : ''), s.calls.toLocaleString('en'), pct(s.sub, s.calls), compact(s.output), pct(s.cacheRead, s.prompt), usdExact(s.cost), `$${(s.cost / s.calls).toFixed(3)}`]),
+    [2, 3, 4, 5, 6, 7]);
+}
+
+function branchCost(repo, branch, until) {
+  return DATA.rows.filter((r) => r.repo === repo && r.branch === branch && (!until || r.date <= until));
+}
+
+function renderPrs() {
+  if (!DATA.prs) {
+    $('prs-hint').textContent = DATA.prNote || 'Pull request matching is off.';
+    table('prs', [], [], []);
+    return;
+  }
+  const merged = DATA.prs.filter((p) => p.mergedAt.slice(0, 10) >= period.from && p.mergedAt.slice(0, 10) <= period.to)
+    .map((p) => ({ p, rows: branchCost(p.repo, p.branch, p.mergedAt.slice(0, 10)) }))
+    .sort((a, b) => sum(b.rows).cost - sum(a.rows).cost);
+  if (!merged.length) { table('prs', ['None merged in this period'], [], []); return; }
+  table('prs', ['PR', 'Title', 'Merged', 'People', 'Days with usage', 'Cost'],
+    merged.map(({ p, rows }) => [
+      el('a', { href: p.url, text: `${p.repo.split('/').slice(1).join('/')}#${p.number}` }),
+      p.title,
+      fmtShort(p.mergedAt.slice(0, 10)),
+      [...new Set(rows.map((r) => r.handle))].sort().join(', ') || '–',
+      String(new Set(rows.map((r) => r.date)).size),
+      usdExact(sum(rows).cost),
+    ]), [4, 5]);
+}
+
+function renderBranches(rows) {
+  const groups = [...groupBy(rows.filter((r) => r.branch), (r) => `${r.repo}\u0000${r.branch}`)]
+    .map(([k, rs]) => ({ key: k.split('\u0000'), rows: rs, s: sum(rs) }))
+    .sort((a, b) => b.s.cost - a.s.cost).slice(0, 10);
+  if (!groups.length) { table('branches', ['No branch information in this period'], [], []); return; }
+  table('branches', ['Repo', 'Branch', 'People', 'Calls', 'Cost', 'Pull request'],
+    groups.map(({ key: [repo, branch], rows: rs, s }) => {
+      const pr = (DATA.prs || []).find((p) => p.repo === repo && p.branch === branch);
+      return [repo, branch, [...new Set(rs.map((r) => r.handle))].sort().join(', '), s.calls.toLocaleString('en'), usdExact(s.cost),
+        pr ? el('a', { href: pr.url, text: `#${pr.number} merged` }) : '–'];
+    }), [3, 4]);
+}
+
+// ── frame ────────────────────────────────────────────────────────────────
+function header() {
+  const people = new Set(DATA.rows.map((r) => r.handle)).size;
+  $('sub').textContent = DATA.rows.length
+    ? `${people} ${people === 1 ? 'person' : 'people'}, ${fmtShort(first)} to ${fmtShort(DATA.rows.at(-1).date)} · from ${DATA.source}`
+    : `No shared usage yet · from ${DATA.source}`;
+  const f = $('footer');
+  f.replaceChildren(
+    el('p', { text: `Costs are estimates at API list price (price table of ${DATA.prices.join(', ') || 'unknown date'}). People on a subscription see what the same usage would cost through the API, not their bill. Batch, priority-tier and negotiated discounts are not in the logs.` }),
+    el('p', { text: `Built ${new Date(DATA.generatedAt).toLocaleString('en')} by ${DATA.collector}. Weeks run Monday to Sunday.` }),
+  );
+  if (DATA.rows.some((r) => r.unpricedCalls)) f.append(el('p', { text: '* Some calls used a model the price table does not know; their cost is not included.' }));
+  if (DATA.skipped.length) f.append(el('p', { text: `${DATA.skipped.length} file(s) were skipped because this version cannot read them.` }));
+}
+
+function periods() {
+  const box = $('periods');
+  for (const p of PERIODS) {
+    const b = el('button', { type: 'button', role: 'radio', 'aria-checked': String(p === period), text: p.label });
+    b.addEventListener('click', () => {
+      period = p;
+      for (const x of box.children) x.setAttribute('aria-checked', String(x === b));
+      render();
+    });
+    box.append(b);
+  }
+}
+
+header();
+periods();
+render();
+let resize;
+addEventListener('resize', () => { clearTimeout(resize); resize = setTimeout(renderDaily, 100); });
+</script>
+</body>
+</html>
